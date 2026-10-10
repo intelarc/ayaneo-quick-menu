@@ -22,8 +22,8 @@ android {
         minSdk = 30          // AYANEO Pocket Air Mini ships Android 11
         // 28 on purpose: Android only lets apps that target 9 or lower switch Wi-Fi on and off directly.
         targetSdk = 28
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     signingConfigs {
