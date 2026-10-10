@@ -114,7 +114,11 @@ class Panel(private val ctx: Context, private val host: Host) {
         override fun run() {
             if (!shown) return
             updateStatus()
-            if (page == Page.PERFORMANCE) { Stats.requestLoadAndTemps(); updateStats() }
+            if (page == Page.PERFORMANCE) {
+                Stats.requestLoadAndTemps(); updateStats()
+                // AYASpace took the fan back (its mode changed, a reboot, ...) while we still think we hold it: fix the UI
+                if (store.fanManual >= 0 && Stats.fanHeldByUs == false) { store.fanManual = -1; refresh() }
+            }
             syncSliders()
             val now = poll()
             if (now != polled) { polled = now; refresh() }

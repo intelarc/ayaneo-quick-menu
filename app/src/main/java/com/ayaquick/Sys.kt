@@ -92,6 +92,8 @@ object Stats {
     var swapTotalGb = 0f; private set
 
     // Only the firmware's root helper can read these; they arrive a moment after [requestLoadAndTemps].
+    /** From the root read on the Performance page: whether a fan speed this menu set is still in force. */
+    @Volatile var fanHeldByUs: Boolean? = null
     @Volatile var cpuLoad = -1; private set         // percent of all cores busy
     @Volatile var cpuTemp = -1f; private set
     @Volatile var gpuTemp = -1f; private set
@@ -172,6 +174,7 @@ object Stats {
             }
             line.startsWith("CPU temperatures") -> cpuTemp = firstNumber(line)
             line.startsWith("GPU temperatures") -> gpuTemp = firstNumber(line)
+            line.startsWith("QMFAN=") -> fanHeldByUs = line.substringAfter('=') == "held"
         }
     }
 

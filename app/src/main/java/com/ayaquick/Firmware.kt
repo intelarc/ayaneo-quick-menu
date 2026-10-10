@@ -235,5 +235,9 @@ object Firmware {
 
     /** The first line of /proc/stat and the CPU / GPU temperature lines, for [Stats]. Null when the helper is off. */
     fun readLoadAndTemps(done: (String?) -> Unit) =
-        rootPost("stats", "head -1 /proc/stat; dumpsys hardware_properties | grep -E '^(CPU|GPU) temperatures'", done)
+        rootPost("stats",
+            "head -1 /proc/stat; dumpsys hardware_properties | grep -E '^(CPU|GPU) temperatures'; " +
+            // whether a fan speed this menu wrote is still in force (a flat curve, or a saved backup waiting)
+            "if grep -lE '^[0-9]+,0\\|[0-9]+,100\$' $AYA_DIR/aya_fan_mode_*_v4.conf >/dev/null 2>&1 || ls $AYA_DIR/*.quickmenu >/dev/null 2>&1; " +
+            "then echo QMFAN=held; else echo QMFAN=auto; fi", done)
 }
