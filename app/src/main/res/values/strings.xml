@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="service_label">Quick Menu – button shortcut</string>
+    <string name="service_desc">Lets a button open AYANEO Quick Menu on top of a running game, and lets the menu draw its performance overlay and run the Recents, Screenshot, Power menu and Lock shortcuts. It only notices the button you choose; it never blocks, changes or records your input.</string>
+</resources>
