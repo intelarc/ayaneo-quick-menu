@@ -159,8 +159,12 @@ class QuickService : AccessibilityService(), Panel.Host {
     private val hudTick = object : Runnable {
         override fun run() {
             val v = hud ?: return
-            Stats.readAll(this@QuickService)
-            if (hudLevel == HudView.DETAILED) { Stats.readSwap(); Stats.requestLoadAndTemps(3000) }     // detailed only
+            when (hudLevel) {
+                // FPS: one property read. Compact: + CPU clock, GPU, battery. Detailed: everything, incl. root reads.
+                HudView.FPS -> Stats.readAll(this@QuickService, cpu = false, gpu = false, mem = false, battery = false)
+                HudView.COMPACT -> Stats.readAll(this@QuickService, cpu = true, gpu = true, mem = false, battery = true)
+                else -> { Stats.readAll(this@QuickService); Stats.readSwap(); Stats.requestLoadAndTemps(3000) }
+            }
             v.update()
             handler.postDelayed(this, 1000)
         }

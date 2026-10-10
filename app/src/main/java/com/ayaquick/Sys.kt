@@ -124,32 +124,41 @@ object Stats {
         watts = if (mv > 0 && ua != Int.MIN_VALUE && w in 0.05f..45f) w else -1f
     }
 
-    fun readAll(ctx: Context) {
-        readBattery(ctx)
+    /**
+     * Read only the figures the caller shows, so a bare FPS overlay costs one property read instead of a dozen
+     * sysfs opens and binder calls every second. [cpu] reads the eight per-core clocks, [gpu] the firmware's GPU
+     * and fan state, [mem] the memory figures; the full Performance page asks for everything.
+     */
+    fun readAll(ctx: Context, cpu: Boolean = true, gpu: Boolean = true, mem: Boolean = true, battery: Boolean = true) {
+        if (battery) readBattery(ctx)
         fps = Props.get("com.ayaneo.fps").toFloatOrNull() ?: -1f
-        var sum = 0L; var share = 0f; var n = 0
-        for (c in 0 until 8) {
-            val cur = readInt("/sys/devices/system/cpu/cpu$c/cpufreq/scaling_cur_freq")
-            if (cur <= 0) { coreShare[c] = 0f; coreMhz[c] = 0; continue }
-            coreMhz[c] = cur / 1000
-            if (maxKhz[c] == 0) maxKhz[c] = readInt("/sys/devices/system/cpu/cpu$c/cpufreq/cpuinfo_max_freq").coerceAtLeast(cur)
-            coreShare[c] = cur.toFloat() / maxKhz[c]
-            sum += cur; share += coreShare[c]; n++
+        if (cpu) {
+            var sum = 0L; var share = 0f; var n = 0
+            for (c in 0 until 8) {
+                val cur = readInt("/sys/devices/system/cpu/cpu$c/cpufreq/scaling_cur_freq")
+                if (cur <= 0) { coreShare[c] = 0f; coreMhz[c] = 0; continue }
+                coreMhz[c] = cur / 1000
+                if (maxKhz[c] == 0) maxKhz[c] = readInt("/sys/devices/system/cpu/cpu$c/cpufreq/cpuinfo_max_freq").coerceAtLeast(cur)
+                coreShare[c] = cur.toFloat() / maxKhz[c]
+                sum += cur; share += coreShare[c]; n++
+            }
+            cpuGhz = if (n > 0) sum / n / 1e6f else -1f
+            cpuPct = if (n > 0) (share / n * 100).toInt().coerceIn(0, 100) else -1
         }
-        cpuGhz = if (n > 0) sum / n / 1e6f else -1f
-        cpuPct = if (n > 0) (share / n * 100).toInt().coerceIn(0, 100) else -1
-        if (Firmware.init(ctx)) {
+        if (gpu && Firmware.init(ctx)) {
             gpuLoad = Firmware.gpuLoad()
             gpuMhz = Firmware.gpuFreqKhz().let { if (it > 0) it / 1000 else -1 }
             fan = Firmware.fanSpeed()
             fanOn = Firmware.fanOn()
         }
-        (ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(memInfo)
-        if (memInfo.totalMem > 0) {
-            val used = memInfo.totalMem - memInfo.availMem
-            ramPct = (used * 100 / memInfo.totalMem).toInt()
-            ramUsedGb = used / 1073741824f
-            ramTotalGb = memInfo.totalMem / 1073741824f
+        if (mem) {
+            (ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(memInfo)
+            if (memInfo.totalMem > 0) {
+                val used = memInfo.totalMem - memInfo.availMem
+                ramPct = (used * 100 / memInfo.totalMem).toInt()
+                ramUsedGb = used / 1073741824f
+                ramTotalGb = memInfo.totalMem / 1073741824f
+            }
         }
         if (android.os.SystemClock.uptimeMillis() - askedAt > 9000) { cpuLoad = -1; cpuTemp = -1f; gpuTemp = -1f }   // nobody is asking any more
     }
